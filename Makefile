@@ -7,7 +7,7 @@ ARTIFACTS := artifacts
 SCHEMA := schema
 
 # Crafting-focused tables
-TABLES := Spell SpellName Item ItemSparse SkillLine SkillLineAbility SpellReagents SpellEffect
+TABLES := Spell SpellName Item ItemSparse SkillLine SkillLineAbility SpellReagents SpellEffect ItemEffect Faction
 
 # Fetch specific version
 # Usage: make fetch VERSION=2.5.5.65463
