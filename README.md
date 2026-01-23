@@ -65,10 +65,12 @@ vendor/db2-parser/artifacts/2.5.5.65463/Item.csv
 | SpellName | Spell/recipe display names |
 | Item | Core item properties |
 | ItemSparse | Extended item data with names |
+| ItemEffect | Recipe item to spell mapping |
 | SkillLine | Profession metadata |
 | SkillLineAbility | Recipe-to-profession mapping |
 | SpellReagents | Crafting reagent requirements |
 | SpellEffect | Spell effects (crafted items, yields) |
+| Faction | Faction names for reputation vendors |
 
 ## Schema Documentation
 
