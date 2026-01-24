@@ -1,5 +1,7 @@
 # db2-parser
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 WoW DB2 data fetcher for crafting-related tables from [wago.tools](https://wago.tools/db2).
 
 ## Overview
@@ -110,4 +112,4 @@ The `MinSkillLineRank` field is often 1 for all recipes and cannot be relied upo
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) for details.
