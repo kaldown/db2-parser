@@ -76,6 +76,23 @@ vendor/db2-parser/artifacts/2.5.5.65463/Item.csv
 
 See `schema/{Table}.md` for column definitions and relationships.
 
+## Known Limitations
+
+### Recipe Difficulty (SkillLineAbility)
+
+DB2 does **not** contain the orange difficulty value (skill required to learn):
+
+| Difficulty | DB2 Field | Available |
+|------------|-----------|-----------|
+| Orange | (not stored) | ❌ |
+| Yellow | TrivialSkillLineRankLow | ✓ |
+| Green | (not stored) | ❌ |
+| Gray | TrivialSkillLineRankHigh | ✓ |
+
+The `MinSkillLineRank` field is often 1 for all recipes and cannot be relied upon.
+
+**Solution:** Consuming projects must fetch difficulty from Wowhead. See `schema/SkillLineAbility.md` for details.
+
 ## Expansion Version Mapping
 
 | Major Version | Expansion |

@@ -33,12 +33,29 @@ Maps spells/recipes to professions with skill requirements.
 ## Notes
 
 - Key for mapping recipes to professions
-- TrivialSkillLineRankLow/High determine difficulty colors:
-  - Orange: below TrivialSkillLineRankLow
-  - Yellow: at TrivialSkillLineRankLow
-  - Green: between Low and High
-  - Gray: at or above TrivialSkillLineRankHigh
 - AcquireMethod values:
   - 0 = Learn from trainer
   - 1 = Auto-learn when skill obtained
   - 2 = Racial skill
+
+## Difficulty Colors
+
+DB2 provides **only yellow and gray** values:
+
+| Color | DB2 Field | Available |
+|-------|-----------|-----------|
+| Orange | (not stored) | ❌ Must fetch from Wowhead |
+| Yellow | TrivialSkillLineRankLow | ✓ |
+| Green | (not stored) | ❌ Calculate: (yellow + gray) / 2 |
+| Gray | TrivialSkillLineRankHigh | ✓ |
+
+### Why Orange Cannot Be Calculated
+
+The orange value (skill required to learn) is NOT reliably derivable from DB2:
+- `MinSkillLineRank` is often 1 for all recipes (unreliable)
+- Formula `2 * yellow - gray` works for some recipes but not all
+- Example: Silver Contact has orange=90, yellow=110, gray=140
+  - Formula gives: 2*110-140 = 80 (wrong)
+  - Gap orange→yellow (20) ≠ gap yellow→gray (30)
+
+**Solution:** Fetch difficulty from Wowhead spell pages using `fetch_wowhead_sources.py --difficulty`
