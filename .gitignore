@@ -1,9 +1,14 @@
 # Downloaded artifacts (fetched, not committed)
 artifacts/
 
-# Agent-specific (local only)
+# Agent/AI coding (local only)
 .claude/
-claude.md
+CLAUDE.md
+docs/plans/
+**/PROMPT*.md
+**/*-design.md
+**/*-impl.md
+**/*-brainstorm.md
 
 # Python
 __pycache__/
