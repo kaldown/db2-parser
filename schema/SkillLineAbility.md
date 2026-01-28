@@ -59,3 +59,33 @@ The orange value (skill required to learn) is NOT reliably derivable from DB2:
   - Gap orange→yellow (20) ≠ gap yellow→gray (30)
 
 **Solution:** Fetch difficulty from Wowhead spell pages using `fetch_wowhead_sources.py --difficulty`
+
+### Handling orange=0 Recipes
+
+Some Wowhead recipes return `orange=0`, meaning "always 100% skillup until yellow". This appears in two contexts:
+
+| Context | Example | Orange | Yellow | Intended Use |
+|---------|---------|--------|--------|--------------|
+| Early-game | Delicate Copper Wire (JC) | 0 | 20 | Available from skill 1 |
+| Late-game | Flask of Fortification (Alchemy) | 0 | 390 | Requires skill 375+ |
+
+**Problem:** Naively using `skillRequired = 1` for all orange=0 recipes causes late-game recipes (flasks, transmutes) to appear as candidates at skill 1 in pathfinding algorithms.
+
+**Recommended solution:** Use a threshold based on the first profession milestone (skill 75):
+
+```python
+EARLY_GAME_THRESHOLD = 75  # First milestone (Apprentice → Journeyman)
+
+if orange > 0:
+    skill_required = orange
+elif yellow <= EARLY_GAME_THRESHOLD:
+    skill_required = 1        # Early-game: available from start
+else:
+    skill_required = yellow   # Late-game: use yellow as requirement
+```
+
+This heuristic correctly categorizes:
+- Starter recipes (yellow ≤ 75) → available from skill 1
+- Progression recipes (yellow > 75) → require higher skill to obtain
+
+See CraftLib's `scripts/generate_recipes.py` for the reference implementation.
