@@ -1,7 +1,7 @@
 # Downloaded artifacts (fetched, not committed)
 artifacts/
 
-# Agent/AI coding (local only)
+# Local development files
 .claude/
 CLAUDE.md
 docs/plans/
