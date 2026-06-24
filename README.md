@@ -105,6 +105,50 @@ The `MinSkillLineRank` field is often 1 for all recipes and cannot be relied upo
 | 4.x | Cataclysm |
 | 5.x | MoP |
 
+## Season of Discovery (Classic Era)
+
+Season of Discovery has **no separate build or product**. The live SoD data ships inside the
+`wow_classic_era` product; the current SoD build is **`1.15.8.67156`**. That single build already
+contains the base 1-300 recipes, the SoD-only seasonal recipes, and the SoD-tuned difficulty
+thresholds, so the SoD dataset is fetched **wholesale** from it (no vanilla-baseline + overlay merge).
+
+```bash
+# Fetch the SoD / Classic Era build explicitly (reproducible)
+make -C vendor/db2-parser fetch VERSION=1.15.8.67156
+
+# ...or resolve the latest 1.x build automatically
+make -C vendor/db2-parser latest EXPANSION=1
+```
+
+Notes:
+
+- `latest EXPANSION=1` matches the highest `1.x` version across products. Pin the explicit
+  `VERSION` when you need reproducibility.
+- The **Anniversary** client is a *different* product (`wow_anniversary`, `2.5.5.x`). Pin it
+  explicitly when regenerating the non-seasonal dataset; do not reuse a `wow_classic` /
+  `wow_classic_era` build for it.
+- `SkillLineAbility` rows with `TrivialSkillLineRankHigh == 0` are profession-rank entries
+  (Apprentice/Journeyman/...), not craftable recipes - skip them. Use `SupercedesSpell` to
+  collapse rank chains.
+- DB2 has **no** season column. Whether a recipe is SoD-only (`seasonId == 2`) is known only from
+  Wowhead's profession listview, not from these tables.
+
+### What SoD difficulty looks like (worked example)
+
+`Ironvine Belt` (spell `1213709`, Blacksmithing, SkillLine 164) - a seasonal recipe above the old
+300 cap, cross-checked against Wowhead's `/classic/` page:
+
+| Color | DB2 (this tool) | Wowhead | Agree? |
+|-------|-----------------|---------|--------|
+| Yellow | `TrivialSkillLineRankLow` = 320 | `colors[1]` = 320 | ✓ |
+| Gray | `TrivialSkillLineRankHigh` = 340 | `colors[3]` = 340 | ✓ |
+| Green | not stored | `colors[2]` = 330 (= midpoint of 320/340) | n/a |
+| Orange | `MinSkillLineRank` = 1 (useless) | `learnedat` / `colors[0]` = 300 | n/a |
+
+Takeaway: DB2 gives **yellow + gray** reliably (and they cross-validate Wowhead); **green** and
+**orange** come only from Wowhead. Wowhead's `green` is the arithmetic midpoint of yellow/gray;
+`orange` is the recipe's learn-at skill (`colors[0]` may be a `0` sentinel - prefer `learnedat`).
+
 ## Requirements
 
 - Python 3.10+
