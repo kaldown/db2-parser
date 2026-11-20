@@ -15,23 +15,25 @@ Used by `extract_db2_sources.py` and `generate_recipes.py` to get faction names:
 
 ## Columns
 
+Columns as of build `1.15.8.67156` (Classic Era / Season of Discovery).
+
 | Column | Type | Description |
 |--------|------|-------------|
-| ID | int | Primary key (faction ID) |
-| Name_lang | string | **Localized faction name** |
-| Description_lang | string | Localized faction description |
-| ReputationIndex | int | Index in reputation panel (-1 = hidden) |
-| ParentFactionID | int | Parent faction for reputation spillover |
-| Expansion | int | Expansion this faction was added |
-| FriendshipRepID | int | Friendship reputation system ID |
-| Field_3_4_1_46722_008 | int | Unknown field |
-| Field_3_4_1_46722_009 | int | Unknown field |
-| Field_3_4_1_46722_010 | int | Unknown field |
-| Field_3_4_1_46722_011 | int | Unknown field |
 | ReputationRaceMask_0 | int | Race restriction for standing 0 |
 | ReputationRaceMask_1 | int | Race restriction for standing 1 |
 | ReputationRaceMask_2 | int | Race restriction for standing 2 |
 | ReputationRaceMask_3 | int | Race restriction for standing 3 |
+| Name_lang | string | **Localized faction name** |
+| Description_lang | string | Localized faction description |
+| ID | int | Primary key (faction ID) |
+| ReputationIndex | int | Index in reputation panel (-1 = hidden) |
+| ParentFactionID | int | Parent faction for reputation spillover |
+| Expansion | int | Expansion this faction was added |
+| FriendshipRepID | int | Friendship reputation system ID |
+| Flags | int | Faction flags |
+| ParagonFactionID | int | Paragon faction ID (0 in Classic-family builds) |
+| RenownFactionID | int | Renown faction ID (0 in Classic-family builds) |
+| RenownCurrencyID | int | Renown currency ID (0 in Classic-family builds) |
 | ReputationClassMask_0 | int | Class restriction for standing 0 |
 | ReputationClassMask_1 | int | Class restriction for standing 1 |
 | ReputationClassMask_2 | int | Class restriction for standing 2 |
@@ -52,6 +54,15 @@ Used by `extract_db2_sources.py` and `generate_recipes.py` to get faction names:
 | ParentFactionMod_1 | float | Reputation spillover modifier 1 |
 | ParentFactionCap_0 | int | Reputation spillover cap 0 |
 | ParentFactionCap_1 | int | Reputation spillover cap 1 |
+
+## Build differences
+
+Column-set differences of the other pinned builds (see `BUILDS.md`) from the list above.
+
+- `2.5.5.65895` (TBC Anniversary): lacks `Flags`, `ParagonFactionID`, `RenownCurrencyID`, `RenownFactionID`; adds `Field_3_4_1_46722_008`, `Field_3_4_1_46722_009`, `Field_3_4_1_46722_010`, `Field_3_4_1_46722_011`.
+- `3.4.5.63697` (WotLK Classic): lacks `Flags`, `ParagonFactionID`, `RenownCurrencyID`, `RenownFactionID`; adds `Field_3_4_1_46722_008`, `Field_3_4_1_46722_009`, `Field_3_4_1_46722_010`, `Field_3_4_1_46722_011`.
+- `3.80.1.68318` (Titan): same columns.
+- `1.60.1.71037` (WoW Forever): lacks `ReputationRaceMask_0`, `ReputationRaceMask_1`, `ReputationRaceMask_2`, `ReputationRaceMask_3`; adds `RenownThresholdCurveID`, `ReputationRaceMasks0_0`, `ReputationRaceMasks0_1`, `ReputationRaceMasks1_0`, `ReputationRaceMasks1_1`, `ReputationRaceMasks2_0`, `ReputationRaceMasks2_1`, `ReputationRaceMasks3_0`, `ReputationRaceMasks3_1`.
 
 ## Relationships
 

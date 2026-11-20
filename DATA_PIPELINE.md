@@ -30,18 +30,24 @@ sbx policy allow network wago.tools,www.wowhead.com
 | 3. Transform | Emit the consumable Lua (CraftLib's schema) | CraftLib `scripts/generate_recipes.py` | `Data/<Bucket>/<Prof>/Recipes.lua` |
 
 Build pinning is **per-product** (never mix): Classic Era/SoD `wow_classic_era 1.15.8.x`,
-TBC `wow_anniversary/wow_classic 2.5.5.x`, WotLK `wow_classic 3.4.x`. `make latest EXPANSION=n`
-takes a global max across products and is **NOT product-aware** - it can return a wrong-product
-build (e.g. a `wow_classic_titan 3.80.x` for `EXPANSION=3` instead of WotLK `3.4.x`). Always
-confirm the resolved build is the product you want, and pin an explicit `VERSION` for
-reproducibility.
+TBC `wow_anniversary 2.5.5.x`, WotLK `wow_classic 3.4.x`, WoW Forever `wowf 1.60.x`. The pinned
+builds are recorded in `BUILDS.md`. `make latest EXPANSION=n` needs `PRODUCT=<key>` whenever
+more than one product has `n.x` builds (today that is every major version: e.g. `1.x` holds
+both Classic Era and WoW Forever, `3.x` both WotLK and Titan); without it the command stops and
+lists the products. `make list-builds EXPANSION=n [PRODUCT=...]` shows what is available. Pin
+an explicit `VERSION` for reproducibility.
+
+WoW Forever differs in table shape: its `ItemEffect` has no `ParentItemID`, so the recipe item
+is found through `ItemXItemEffect` (an optional table, fetched only where it exists). Tool
+requirements come from `SpellTotems` + `TotemCategory`, present in every pinned build. See
+`schema/*.md` "Build differences".
 
 ## Happy path (one continuous-tier bucket, e.g. WotLK)
 
 Run from the CraftLib repo root:
 
 ```bash
-make -C vendor/db2-parser latest EXPANSION=3          # Stage 1: resolve+fetch the 3.4.x build
+make -C vendor/db2-parser latest EXPANSION=3 PRODUCT=wow_classic   # Stage 1: resolve+fetch the 3.4.x build
 # per profession (or use the make tier target wotlk-all):
 python3 scripts/extract_db2_sources.py  --version <build> --profession Tailoring --expansion wotlk
 python3 scripts/fetch_wowhead_sources.py --profession Tailoring --expansion wotlk
@@ -53,13 +59,16 @@ luac5.1 -p Data/WotLK/Tailoring/Recipes.lua
 
 ## Error handling (verified behavior, by stage)
 
-**Stage 1 - wago (`fetch.py`):** minimal by design. On `HTTPError`/`URLError`/timeout it prints
-the code/reason and returns False (**no retry, no backoff, bare UA**); empty (<10 bytes) or an
-HTML error page is rejected as EMPTY/NOT FOUND. `make` exits non-zero and names the failed
-tables. There is no partial-file corruption risk (each table is written whole). **Recovery:
-re-run `make fetch VERSION=<build>`** - already-fetched tables are simply rewritten; the
-`artifacts/<build>/` cache fills in. If a build 404s, wago may have retired it - re-resolve
-with `make latest EXPANSION=n` and pin the new build.
+**Stage 1 - wago (`fetch.py`):** browser-like headers + gzip. Network errors and HTTP 5xx are
+retried (3 attempts, 2 s / 4 s backoff); 4xx is not. HTTP 400 means the table does not exist in
+that build and is reported `NOT IN BUILD` - a run failure for a required table, a skip for an
+optional one. Empty bodies and HTML/JSON error bodies are rejected (`EMPTY`, `NOT CSV (...)`).
+`make` exits non-zero and names the tables under `Not in build:` / `Failed:`. Each CSV is
+written to `<Table>.csv.tmp` and renamed, so a failed or interrupted download never truncates
+or replaces an existing CSV. **Recovery: re-run `make fetch VERSION=<build>`** - tables are
+rewritten; the `artifacts/<build>/` cache fills in. If a build stops being served, wago may
+have retired it - pick a new one with `make list-builds EXPANSION=n PRODUCT=<key>`, pin it,
+and update `BUILDS.md`.
 
 **Stage 2 - Wowhead (`fetch_wowhead_sources.py`):** hardened.
 - Full CloudFront-WAF-clearing browser headers (UA + Accept-Language + Referer + Sec-Fetch-* +
@@ -134,9 +143,6 @@ orange+green+seasonId from Wowhead.
 
 ## Known limitations (improvements are tracked in the backlogs, not done inline)
 
-- Stage 1 (`fetch.py`) has no retry/backoff and a bare UA - a transient wago failure needs a
-  manual re-run. (db2-parser backlog: harden HTTP + a resumable driver.)
-- `make latest` is not product-aware (can pick the wrong product for `EXPANSION=3`).
 - There is no single "fetch-until-complete" driver that auto-retries failed professions until
   the gates pass; today that loop is manual (steps 1-2 above). (CraftLib backlog.)
 - The resumable per-spell checkpoint is coarse (every 10); the SoD trainer-verifier has a

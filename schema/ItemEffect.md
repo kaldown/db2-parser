@@ -13,7 +13,12 @@ Used by `extract_db2_sources.py` and `generate_recipes.py` to identify recipe it
 - `SpellID` - The spell the item teaches
 - `ParentItemID` - The item ID of the recipe
 
+WoW Forever (`1.60.1.71037`) has no `ParentItemID`; there the item is found through
+`ItemXItemEffect` (`ItemID` -> `ItemEffectID` -> `ItemEffect.ID`). See `schema/ItemXItemEffect.md`.
+
 ## Columns
+
+Columns as of build `1.15.8.67156` (Classic Era / Season of Discovery).
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -26,13 +31,22 @@ Used by `extract_db2_sources.py` and `generate_recipes.py` to identify recipe it
 | SpellCategoryID | int | Spell category |
 | SpellID | int | **Spell taught when item is used** |
 | ChrSpecializationID | int | Class specialization restriction |
-| PlayerConditionID | int | Player condition requirement |
 | ParentItemID | int | **Item that has this effect** |
+
+## Build differences
+
+Column-set differences of the other pinned builds (see `BUILDS.md`) from the list above.
+
+- `2.5.5.65895` (TBC Anniversary): adds `PlayerConditionID`.
+- `3.4.5.63697` (WotLK Classic): same columns.
+- `3.80.1.68318` (Titan): adds `PlayerConditionID`.
+- `1.60.1.71037` (WoW Forever): lacks `ParentItemID`; adds `PlayerConditionID`.
 
 ## Relationships
 
 - `SpellID` → `Spell.ID` - The spell this item teaches
-- `ParentItemID` → `Item.ID` - The item with this effect
+- `ParentItemID` → `Item.ID` - The item with this effect (builds that have the column)
+- `ID` ← `ItemXItemEffect.ItemEffectID` - item link in builds without `ParentItemID`
 
 ## Example
 

@@ -27,9 +27,41 @@ make -C vendor/db2-parser fetch VERSION=2.5.5.65463
 ### Fetch Latest for Expansion
 
 ```bash
-# 2 = TBC, 3 = WotLK, 4 = Cata, etc.
-make -C vendor/db2-parser latest EXPANSION=2
+# Major version + wago.tools product key
+make -C vendor/db2-parser latest EXPANSION=1 PRODUCT=wow_classic_era
+make -C vendor/db2-parser latest EXPANSION=1 PRODUCT=wowf
 ```
+
+Several products share a major version (`1.x` holds Classic Era, WoW Forever and more), so
+without `PRODUCT` the command stops and lists the candidate products instead of guessing.
+The chosen product is always printed with the build.
+
+### List Builds
+
+```bash
+make -C vendor/db2-parser list-builds EXPANSION=1            # every product with 1.x builds
+make -C vendor/db2-parser list-builds EXPANSION=1 PRODUCT=wowf
+```
+
+### Rebuild the Cache
+
+The pinned builds are listed in [BUILDS.md](BUILDS.md). On a fresh clone:
+
+```bash
+make -C vendor/db2-parser fetch VERSION=1.15.8.67156   # wow_classic_era: Vanilla, SoD
+make -C vendor/db2-parser fetch VERSION=2.5.5.65895    # wow_anniversary: TBC
+make -C vendor/db2-parser fetch VERSION=3.4.5.63697    # wow_classic: WotLK
+make -C vendor/db2-parser fetch VERSION=3.80.1.68318   # wow_classic_titan: Titan
+make -C vendor/db2-parser fetch VERSION=1.60.1.71037   # wowf: WoW Forever
+```
+
+### Network Behavior
+
+Requests send browser-like headers and accept gzip. Network errors and HTTP 5xx are retried
+(3 attempts, 2 s then 4 s apart); HTTP 4xx is not. A table that does not exist in a build
+(HTTP 400) is reported as `NOT IN BUILD`: that fails the fetch for a required table and is
+skipped for an optional one. Each CSV is written to a temporary file and renamed, so a failed
+download never truncates or replaces an existing CSV.
 
 ### Validate Schema
 
@@ -61,6 +93,8 @@ vendor/db2-parser/artifacts/2.5.5.65463/Item.csv
 
 ## Available Tables
 
+Required tables (`TABLES` in the Makefile):
+
 | Table | Description |
 |-------|-------------|
 | Spell | Spell descriptions and subtexts |
@@ -73,6 +107,14 @@ vendor/db2-parser/artifacts/2.5.5.65463/Item.csv
 | SpellReagents | Crafting reagent requirements |
 | SpellEffect | Spell effects (crafted items, yields) |
 | Faction | Faction names for reputation vendors |
+| SpellTotems | Tools a recipe needs (tool category or item) |
+| TotemCategory | Tool category names |
+
+Optional tables (`OPTIONAL_TABLES`, fetched where the build has them):
+
+| Table | Description |
+|-------|-------------|
+| ItemXItemEffect | Item to effect link, for builds whose ItemEffect has no ParentItemID (WoW Forever) |
 
 ## Schema Documentation
 
@@ -99,7 +141,7 @@ The `MinSkillLineRank` field is often 1 for all recipes and cannot be relied upo
 
 | Major Version | Expansion |
 |---------------|-----------|
-| 1.x | Classic Era (Vanilla) |
+| 1.x | Classic Era (Vanilla); WoW Forever is also 1.x (`1.60.x`, product `wowf`) |
 | 2.x | TBC |
 | 3.x | WotLK |
 | 4.x | Cataclysm |
@@ -116,14 +158,15 @@ thresholds, so the SoD dataset is fetched **wholesale** from it (no vanilla-base
 # Fetch the SoD / Classic Era build explicitly (reproducible)
 make -C vendor/db2-parser fetch VERSION=1.15.8.67156
 
-# ...or resolve the latest 1.x build automatically
-make -C vendor/db2-parser latest EXPANSION=1
+# ...or resolve the latest Classic Era build
+make -C vendor/db2-parser latest EXPANSION=1 PRODUCT=wow_classic_era
 ```
 
 Notes:
 
-- `latest EXPANSION=1` matches the highest `1.x` version across products. Pin the explicit
-  `VERSION` when you need reproducibility.
+- `PRODUCT` is required for `EXPANSION=1`: WoW Forever (`wowf`, `1.60.x`) also has `1.x`
+  builds, so a plain "latest 1.x" would fetch the wrong game. Pin the explicit `VERSION`
+  (see `BUILDS.md`) when you need reproducibility.
 - The **Anniversary** client is a *different* product (`wow_anniversary`, `2.5.5.x`). Pin it
   explicitly when regenerating the non-seasonal dataset; do not reuse a `wow_classic` /
   `wow_classic_era` build for it.

@@ -4,6 +4,8 @@ Extended item data including names, stats, and requirements.
 
 ## Columns
 
+Columns as of build `1.15.8.67156` (Classic Era / Season of Discovery).
+
 | Column | Type | Description |
 |--------|------|-------------|
 | ID | int | Primary key, item ID |
@@ -74,12 +76,12 @@ Extended item data including names, stats, and requirements.
 | Flags_3 | int | Item flags 4 |
 | Flags_4 | int | Item flags 5 |
 | OppositeFactionItemID | int | Opposite faction equivalent |
-| Field_1_15_7_59706_027 | int | Unknown field |
+| ModifiedCraftingReagentItemID | int | Modified crafting reagent item ID |
 | ContentTuningID | int | Content tuning reference |
-| Field_1_15_7_59706_029 | int | Unknown field |
+| PlayerLevelToItemLevelCurveID | int | Curve mapping player level to item level |
 | MaxDurability | int | Maximum durability |
 | ItemNameDescriptionID | int | Name description ID |
-| Field_1_15_7_59706_032 | int | Unknown field |
+| RequiredTransmogHoliday | int | Holiday required for transmog |
 | RequiredHoliday | int | Required holiday event |
 | LimitCategory | int | Limit category |
 | Gem_properties | int | Gem properties |
@@ -128,9 +130,9 @@ Extended item data including names, stats, and requirements.
 | StatModifier_bonusAmount_8 | int | Bonus stat amount 9 |
 | StatModifier_bonusAmount_9 | int | Bonus stat amount 10 |
 | ExpansionID | int | Expansion this item is from |
-| Field_1_15_7_59706_057 | int | Unknown field |
-| Field_1_15_7_59706_058 | int | Unknown field |
-| Field_1_15_7_59706_059 | int | Unknown field |
+| ArtifactID | int | Artifact ID (unused in Classic-family builds) |
+| SpellWeight | int | Spell weight |
+| SpellWeightCategory | int | Spell weight category |
 | SocketType_0 | int | Socket type 1 |
 | SocketType_1 | int | Socket type 2 |
 | SocketType_2 | int | Socket type 3 |
@@ -147,6 +149,15 @@ Extended item data including names, stats, and requirements.
 | OverallQualityID | int | Item quality (rarity) |
 | AmmunitionType | int | Ammo type |
 | RequiredLevel | int | Level required to use |
+
+## Build differences
+
+Column-set differences of the other pinned builds (see `BUILDS.md`) from the list above.
+
+- `2.5.5.65895` (TBC Anniversary): lacks `ArtifactID`, `ModifiedCraftingReagentItemID`, `PlayerLevelToItemLevelCurveID`, `RequiredTransmogHoliday`, `SpellWeight`, `SpellWeightCategory`; adds `Field_1_15_7_59706_027`, `Field_1_15_7_59706_029`, `Field_1_15_7_59706_032`, `Field_1_15_7_59706_057`, `Field_1_15_7_59706_058`, `Field_1_15_7_59706_059`.
+- `3.4.5.63697` (WotLK Classic): lacks `ArtifactID`, `ModifiedCraftingReagentItemID`, `PlayerLevelToItemLevelCurveID`, `RequiredTransmogHoliday`, `SpellWeight`, `SpellWeightCategory`; adds `Field_1_15_7_59706_027`, `Field_1_15_7_59706_029`, `Field_1_15_7_59706_032`, `Field_1_15_7_59706_057`, `Field_1_15_7_59706_058`, `Field_1_15_7_59706_059`.
+- `3.80.1.68318` (Titan): same columns.
+- `1.60.1.71037` (WoW Forever): lacks `AllowableRace`, `Field_1_15_3_55112_014_0`, `Field_1_15_3_55112_014_1`, `Field_1_15_3_55112_014_2`, `Field_1_15_3_55112_014_3`, `Field_1_15_3_55112_014_4`, `Field_1_15_3_55112_014_5`, `Field_1_15_3_55112_014_6`, `Field_1_15_3_55112_014_7`, `Field_1_15_3_55112_014_8`, `Field_1_15_3_55112_014_9`, `Field_1_15_7_59706_054`, `ItemRandomSuffixGroupID`, `MaxDamage_0`, `MaxDamage_1`, `MaxDamage_2`, `MaxDamage_3`, `MaxDamage_4`, `MaxDurability`, `MinDamage_0`, `MinDamage_1`, `MinDamage_2`, `MinDamage_3`, `MinDamage_4`, `RandomSelect`, `Resistances_0`, `Resistances_1`, `Resistances_2`, `Resistances_3`, `Resistances_4`, `Resistances_5`, `Resistances_6`, `StatModifier_bonusAmount_0`, `StatModifier_bonusAmount_1`, `StatModifier_bonusAmount_2`, `StatModifier_bonusAmount_3`, `StatModifier_bonusAmount_4`, `StatModifier_bonusAmount_5`, `StatModifier_bonusAmount_6`, `StatModifier_bonusAmount_7`, `StatModifier_bonusAmount_8`, `StatModifier_bonusAmount_9`; adds `AllowableRace_0`, `AllowableRace_1`, `ItemLevelOffsetCurveID`, `ItemLevelOffsetItemLevel`, `ItemSquishEraID`.
 
 ## Relationships
 
