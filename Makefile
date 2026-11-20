@@ -6,8 +6,12 @@ SCRIPTS := scripts
 ARTIFACTS := artifacts
 SCHEMA := schema
 
-# Crafting-focused tables
-TABLES := Spell SpellName Item ItemSparse SkillLine SkillLineAbility SpellReagents SpellEffect ItemEffect Faction
+# Crafting-focused tables. A required table missing from a build fails the fetch.
+TABLES := Spell SpellName Item ItemSparse SkillLine SkillLineAbility SpellReagents SpellEffect ItemEffect Faction SpellTotems TotemCategory
+
+# Fetched best-effort: present only in some builds (see BUILDS.md).
+# ItemXItemEffect links recipe items to their effects where ItemEffect has no ParentItemID (Forever).
+OPTIONAL_TABLES := ItemXItemEffect
 
 # Fetch specific version
 # Usage: make fetch VERSION=2.5.5.65463
@@ -15,7 +19,7 @@ fetch:
 ifndef VERSION
 	$(error VERSION is required. Usage: make fetch VERSION=2.5.5.65463)
 endif
-	@$(PYTHON) $(SCRIPTS)/fetch.py --version $(VERSION) --tables $(TABLES) --output $(ARTIFACTS)
+	@$(PYTHON) $(SCRIPTS)/fetch.py --version $(VERSION) --tables $(TABLES) --optional-tables $(OPTIONAL_TABLES) --output $(ARTIFACTS)
 
 # Fetch latest for expansion
 # Usage: make latest EXPANSION=2
@@ -39,7 +43,9 @@ clean:
 
 # List available tables
 list-tables:
-	@echo "Available tables:"
+	@echo "Required tables:"
 	@for table in $(TABLES); do echo "  - $$table"; done
+	@echo "Optional tables:"
+	@for table in $(OPTIONAL_TABLES); do echo "  - $$table"; done
 
 .PHONY: fetch latest validate clean list-tables

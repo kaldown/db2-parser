@@ -2,12 +2,14 @@
 """Download DB2 CSV tables from wago.tools.
 
 Usage:
-    python fetch.py --version 2.5.5.65463 --tables Spell SpellName --output artifacts
+    python fetch.py --version 2.5.5.65463 --tables Spell SpellName \
+        [--optional-tables ItemXItemEffect] --output artifacts
 """
 
 import argparse
 import gzip
 import http.client
+import os
 import sys
 import time
 import urllib.request
@@ -73,85 +75,115 @@ def get_csv_url(table_name: str, version: str) -> str:
     return f"{WAGO_BASE_URL}/{table_name}/csv?build={version}"
 
 
-def download_table(table_name: str, version: str, output_dir: Path) -> bool:
-    """Download a single table CSV.
+# download_table outcomes. MISSING means wago.tools says the table does not exist
+# in that build (HTTP 400); FAILED is anything else that left us without a CSV.
+OK = "ok"
+MISSING = "missing"
+FAILED = "failed"
 
-    Returns True on success, False on failure.
+
+def _not_csv_reason(content: bytes) -> str | None:
+    """Return why a response body is not a CSV, or None if it looks like one."""
+    if not content or len(content) < 10:
+        return "EMPTY"
+    head = content.lstrip()[:16].lower()
+    if head.startswith(b"<!doctype") or head.startswith(b"<html"):
+        return "NOT CSV (HTML)"
+    # wago.tools answers errors as JSON ({"errors": ...}); never save that as data.
+    if head.startswith(b"{") or head.startswith(b"["):
+        return "NOT CSV (JSON)"
+    return None
+
+
+def download_table(table_name: str, version: str, output_dir: Path, *, fetcher=http_get) -> str:
+    """Download one table CSV into output_dir. Returns OK, MISSING or FAILED.
+
+    The body goes to <Table>.csv.tmp first and is renamed into place, so an
+    interrupted or rejected download never truncates or replaces a good CSV.
     """
     url = get_csv_url(table_name, version)
     output_path = output_dir / f"{table_name}.csv"
+    tmp_path = output_dir / f"{table_name}.csv.tmp"
 
     print(f"Fetching {table_name}.csv... ", end="", flush=True)
 
     try:
-        request = urllib.request.Request(
-            url,
-            headers={"User-Agent": "db2-parser/1.0"}
-        )
-
-        with urllib.request.urlopen(request, timeout=60) as response:
-            content = response.read()
-
-            # Check for empty response
-            if not content or len(content) < 10:
-                print("EMPTY")
-                return False
-
-            # Check for HTML error page
-            if content.startswith(b"<!DOCTYPE") or content.startswith(b"<html"):
-                print("NOT FOUND")
-                return False
-
-            # Write to file
-            with open(output_path, "wb") as f:
-                f.write(content)
-
-            size_kb = len(content) / 1024
-            print(f"done ({size_kb:.1f} KB)")
-            return True
-
+        content = fetcher(url, timeout=60)
+        reason = _not_csv_reason(content)
+        if reason:
+            print(reason, end="")
+            return FAILED
+        tmp_path.write_bytes(content)
+        os.replace(tmp_path, output_path)
+        print(f"done ({len(content) / 1024:.1f} KB)", end="")
+        return OK
     except urllib.error.HTTPError as e:
-        print(f"HTTP {e.code}")
-        return False
+        if e.code == 400:
+            print("NOT IN BUILD", end="")
+            return MISSING
+        print(f"HTTP {e.code}", end="")
+        return FAILED
     except urllib.error.URLError as e:
-        print(f"ERROR: {e.reason}")
-        return False
+        print(f"ERROR: {e.reason}", end="")
+        return FAILED
     except Exception as e:
-        print(f"ERROR: {e}")
-        return False
+        print(f"ERROR: {e}", end="")
+        return FAILED
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+def fetch_tables(
+    version: str,
+    tables: list[str],
+    optional: list[str],
+    output_root: Path,
+    *,
+    fetcher=http_get,
+) -> int:
+    """Download required and optional tables for one build into output_root/<version>/.
+
+    Returns the process exit code: 1 if any required table is not OK, else 0.
+    Optional tables that are absent or fail are reported and skipped.
+    """
+    version_dir = output_root / version
+    version_dir.mkdir(parents=True, exist_ok=True)
+    print(f"Downloading to {version_dir}/")
+    print()
+
+    results: dict[str, str] = {}
+    optional_set = set(optional)
+    for table in list(tables) + [t for t in optional if t not in tables]:
+        results[table] = download_table(table, version, version_dir, fetcher=fetcher)
+        is_optional = table in optional_set and table not in tables
+        print(" (optional, skipped)" if is_optional and results[table] != OK else "")
+
+    def label(table: str) -> str:
+        return f"{table} (optional)" if table in optional_set and table not in tables else table
+
+    print()
+    ok = sum(1 for status in results.values() if status == OK)
+    print(f"Downloaded {ok}/{len(results)} tables")
+    missing = [label(t) for t, status in results.items() if status == MISSING]
+    failed = [label(t) for t, status in results.items() if status == FAILED]
+    if missing:
+        print(f"Not in build: {', '.join(missing)}")
+    if failed:
+        print(f"Failed: {', '.join(failed)}")
+
+    required_bad = [t for t in tables if results[t] != OK]
+    return 1 if required_bad else 0
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Download DB2 CSV tables from wago.tools")
     parser.add_argument("--version", required=True, help="Build version (e.g., 2.5.5.65463)")
-    parser.add_argument("--tables", nargs="+", required=True, help="Table names to download")
+    parser.add_argument("--tables", nargs="+", required=True, help="Required table names")
+    parser.add_argument("--optional-tables", nargs="*", default=[],
+                        help="Tables fetched best-effort (absent in some builds)")
     parser.add_argument("--output", type=Path, default=Path("artifacts"), help="Output directory")
     args = parser.parse_args()
-
-    # Create versioned output directory
-    version_dir = args.output / args.version
-    version_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Downloading to {version_dir}/")
-    print()
-
-    # Download each table
-    results = {}
-    for table in args.tables:
-        results[table] = download_table(table, args.version, version_dir)
-
-    # Summary
-    print()
-    success = sum(1 for v in results.values() if v)
-    total = len(results)
-    print(f"Downloaded {success}/{total} tables")
-
-    if success < total:
-        failed = [k for k, v in results.items() if not v]
-        print(f"Failed: {', '.join(failed)}")
-        return 1
-
-    return 0
+    return fetch_tables(args.version, args.tables, args.optional_tables, args.output)
 
 
 if __name__ == "__main__":
