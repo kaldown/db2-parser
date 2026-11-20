@@ -67,10 +67,13 @@ def get_schema_columns(schema_path: Path) -> list[str]:
     return columns
 
 
-def validate_table(table_name: str, schema_dir: Path, artifacts_dir: Path, version: str) -> tuple[bool, str]:
+def validate_table(
+    table_name: str, schema_dir: Path, artifacts_dir: Path, version: str, optional: bool = False
+) -> tuple[bool, str]:
     """Validate a single table's schema against CSV.
 
-    Returns (is_valid, message).
+    An optional table (fetched best-effort, absent from some builds) with no CSV
+    is skipped rather than failed. Returns (is_valid, message).
     """
     schema_path = schema_dir / f"{table_name}.md"
     csv_path = artifacts_dir / version / f"{table_name}.csv"
@@ -80,6 +83,8 @@ def validate_table(table_name: str, schema_dir: Path, artifacts_dir: Path, versi
         return False, f"schema not found: {schema_path}"
 
     if not csv_path.exists():
+        if optional:
+            return True, "SKIPPED (optional, not in build)"
         return False, f"CSV not found: {csv_path}"
 
     # Get columns
@@ -113,6 +118,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Validate schema matches downloaded CSVs")
     parser.add_argument("--version", required=True, help="Build version to validate")
     parser.add_argument("--schema", type=Path, default=Path("schema"), help="Schema directory")
+    parser.add_argument("--optional-tables", nargs="*", default=[],
+                        help="Tables that may be absent from a build")
     parser.add_argument("--artifacts", type=Path, default=Path("artifacts"), help="Artifacts directory")
     args = parser.parse_args()
 
@@ -128,7 +135,8 @@ def main() -> int:
     all_valid = True
     for schema_file in sorted(schema_files):
         table_name = schema_file.stem
-        is_valid, message = validate_table(table_name, args.schema, args.artifacts, args.version)
+        is_valid, message = validate_table(table_name, args.schema, args.artifacts, args.version,
+                                           optional=table_name in args.optional_tables)
 
         status = "OK" if is_valid else "FAIL"
         print(f"{table_name}: {message}")

@@ -44,7 +44,7 @@ validate:
 ifndef VERSION
 	$(error VERSION is required. Usage: make validate VERSION=2.5.5.65463)
 endif
-	@$(PYTHON) $(SCRIPTS)/validate.py --version $(VERSION) --schema $(SCHEMA) --artifacts $(ARTIFACTS)
+	@$(PYTHON) $(SCRIPTS)/validate.py --version $(VERSION) --schema $(SCHEMA) --artifacts $(ARTIFACTS) --optional-tables $(OPTIONAL_TABLES)
 
 # Remove all artifacts
 clean:
