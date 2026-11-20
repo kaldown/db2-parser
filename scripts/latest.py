@@ -1,68 +1,117 @@
 #!/usr/bin/env python3
-"""Find and fetch the latest build for an expansion.
+"""Find and fetch the latest build for an expansion, within one product.
 
 Usage:
-    python latest.py --expansion 2 --tables Spell SpellName --output artifacts
+    python latest.py --expansion 1 --product wow_classic_era --tables Spell SpellName --output artifacts
+    python latest.py --expansion 1 --list
 """
 
 import argparse
 import json
 import sys
-import urllib.request
-import urllib.error
 from pathlib import Path
+
+# Import the sibling module no matter which directory the script is run from.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from fetch import fetch_tables, http_get  # noqa: E402
 
 
 WAGO_BUILDS_URL = "https://wago.tools/api/builds"
 
 
+class AmbiguousProductError(Exception):
+    """More than one product has builds for the requested major version."""
+
+    def __init__(self, products: list[str]):
+        super().__init__(", ".join(products))
+        self.products = products
+
+
+class NoBuildsError(Exception):
+    """No build matches; `available` lists the products that do have builds for the major."""
+
+    def __init__(self, available: list[str]):
+        super().__init__(", ".join(available))
+        self.available = available
+
+
 def get_all_builds() -> dict:
-    """Fetch all builds from wago.tools API."""
-    request = urllib.request.Request(
-        WAGO_BUILDS_URL,
-        headers={"User-Agent": "db2-parser/1.0"}
-    )
-
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read().decode("utf-8"))
+    """Fetch all builds from wago.tools API: {product: [{version, created_at, ...}]}."""
+    return json.loads(http_get(WAGO_BUILDS_URL, timeout=30).decode("utf-8"))
 
 
-def find_latest_for_expansion(builds: dict, expansion: int) -> str | None:
-    """Find the latest version matching expansion.x.x.x pattern.
+def version_key(v: str) -> tuple[int, ...]:
+    """Sort key for X.Y.Z.BUILD versions. Malformed versions sort lowest."""
+    try:
+        return tuple(int(p) for p in v.split("."))
+    except ValueError:
+        return (-1,)
 
-    Searches all products for versions starting with the expansion number.
-    Returns the highest version found.
-    """
-    matching_versions = []
 
+def _builds_for_major(builds: dict, major: int) -> dict[str, list[dict]]:
+    prefix = f"{major}."
+    found: dict[str, list[dict]] = {}
     for product, product_builds in builds.items():
-        for build in product_builds:
-            version = build.get("version", "")
-            # Check if version starts with expansion number
-            if version.startswith(f"{expansion}."):
-                matching_versions.append(version)
+        matching = [b for b in product_builds if str(b.get("version", "")).startswith(prefix)]
+        if matching:
+            found[product] = matching
+    return found
 
-    if not matching_versions:
-        return None
 
-    # Sort versions and return the latest
-    # Version format: X.X.X.XXXXX - sort by parts
-    def version_key(v):
-        parts = v.split(".")
-        return tuple(int(p) for p in parts)
+def products_for_major(builds: dict, major: int) -> list[str]:
+    """Sorted product keys that have at least one <major>.x build."""
+    return sorted(_builds_for_major(builds, major))
 
-    matching_versions.sort(key=version_key, reverse=True)
-    return matching_versions[0]
+
+def find_latest_for_expansion(builds: dict, expansion: int, product: str | None = None) -> tuple[str, str]:
+    """Return (version, product) of the newest <expansion>.x build.
+
+    With `product`, only that product's builds count. Without it, the answer is
+    only given when exactly one product has builds for the major: since several
+    games now share a major version (e.g. Classic Era and WoW Forever are both
+    1.x), a cross-product max would silently fetch the wrong game.
+    """
+    by_product = _builds_for_major(builds, expansion)
+    if product is not None:
+        if product not in by_product:
+            raise NoBuildsError(sorted(by_product))
+        candidates = {product: by_product[product]}
+    elif len(by_product) > 1:
+        raise AmbiguousProductError(sorted(by_product))
+    elif not by_product:
+        raise NoBuildsError([])
+    else:
+        candidates = by_product
+
+    (chosen_product, product_builds), = candidates.items()
+    newest = max((b["version"] for b in product_builds), key=version_key)
+    return newest, chosen_product
+
+
+def list_builds(builds: dict, major: int, product: str | None = None) -> list[tuple[str, str, str]]:
+    """(product, version, created_at) rows, by product then newest version first."""
+    rows = []
+    for name, product_builds in sorted(_builds_for_major(builds, major).items()):
+        if product is not None and name != product:
+            continue
+        for b in sorted(product_builds, key=lambda b: version_key(b["version"]), reverse=True):
+            rows.append((name, b["version"], str(b.get("created_at", ""))))
+    return rows
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Find and fetch latest build for expansion")
-    parser.add_argument("--expansion", type=int, required=True, help="Expansion number (2=TBC, 3=WotLK, etc.)")
-    parser.add_argument("--tables", nargs="+", required=True, help="Table names to download")
+    parser.add_argument("--expansion", type=int, required=True, help="Major version (1=Classic Era/Forever, 2=TBC, 3=WotLK, ...)")
+    parser.add_argument("--product", help="wago.tools product key (e.g. wow_classic_era, wowf)")
+    parser.add_argument("--list", action="store_true", help="List matching builds and exit without fetching")
+    parser.add_argument("--tables", nargs="+", help="Required table names")
+    parser.add_argument("--optional-tables", nargs="*", default=[], help="Tables fetched best-effort")
     parser.add_argument("--output", type=Path, default=Path("artifacts"), help="Output directory")
     args = parser.parse_args()
 
-    print(f"Finding latest build for expansion {args.expansion}...")
+    if not args.list and not args.tables:
+        parser.error("--tables is required unless --list is given")
 
     try:
         builds = get_all_builds()
@@ -70,42 +119,33 @@ def main() -> int:
         print(f"Error fetching builds: {e}", file=sys.stderr)
         return 1
 
-    version = find_latest_for_expansion(builds, args.expansion)
+    n = args.expansion
+    if args.list:
+        rows = list_builds(builds, n, args.product)
+        if not rows:
+            print(f"No builds for expansion {n}" + (f" in product {args.product}" if args.product else ""),
+                  file=sys.stderr)
+            return 1
+        for product, version, created in rows:
+            print(f"{product:<22} {version:<16} {created}")
+        return 0
 
-    if not version:
-        print(f"No builds found for expansion {args.expansion}", file=sys.stderr)
+    print(f"Finding latest build for expansion {n}...")
+    try:
+        version, product = find_latest_for_expansion(builds, n, args.product)
+    except AmbiguousProductError as e:
+        print(f"Expansion {n} has builds in several products: {', '.join(e.products)}. "
+              f"Pass PRODUCT=<key> (see 'make list-builds EXPANSION={n}').", file=sys.stderr)
+        return 1
+    except NoBuildsError as e:
+        where = f" in product {args.product}" if args.product else ""
+        available = ", ".join(e.available) or "none"
+        print(f"No builds for expansion {n}{where}. Products with {n}.x builds: {available}", file=sys.stderr)
         return 1
 
-    print(f"Latest: {version}")
+    print(f"Latest: {version} (product {product})")
     print()
-
-    # Import and call fetch logic
-    from fetch import download_table
-
-    # Create versioned output directory
-    version_dir = args.output / version
-    version_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Downloading to {version_dir}/")
-    print()
-
-    # Download each table
-    results = {}
-    for table in args.tables:
-        results[table] = download_table(table, version, version_dir)
-
-    # Summary
-    print()
-    success = sum(1 for v in results.values() if v)
-    total = len(results)
-    print(f"Downloaded {success}/{total} tables")
-
-    if success < total:
-        failed = [k for k, v in results.items() if not v]
-        print(f"Failed: {', '.join(failed)}")
-        return 1
-
-    return 0
+    return fetch_tables(version, args.tables, args.optional_tables, args.output)
 
 
 if __name__ == "__main__":

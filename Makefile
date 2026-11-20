@@ -21,13 +21,22 @@ ifndef VERSION
 endif
 	@$(PYTHON) $(SCRIPTS)/fetch.py --version $(VERSION) --tables $(TABLES) --optional-tables $(OPTIONAL_TABLES) --output $(ARTIFACTS)
 
-# Fetch latest for expansion
-# Usage: make latest EXPANSION=2
+# Fetch latest build for expansion, within one wago.tools product
+# Usage: make latest EXPANSION=1 PRODUCT=wow_classic_era
+# Without PRODUCT it stops if several products have builds for that major version.
 latest:
 ifndef EXPANSION
-	$(error EXPANSION is required. Usage: make latest EXPANSION=2)
+	$(error EXPANSION is required. Usage: make latest EXPANSION=1 PRODUCT=wow_classic_era)
 endif
-	@$(PYTHON) $(SCRIPTS)/latest.py --expansion $(EXPANSION) --tables $(TABLES) --output $(ARTIFACTS)
+	@$(PYTHON) $(SCRIPTS)/latest.py --expansion $(EXPANSION) $(if $(PRODUCT),--product $(PRODUCT)) --tables $(TABLES) --optional-tables $(OPTIONAL_TABLES) --output $(ARTIFACTS)
+
+# List builds (product, version, date) for a major version
+# Usage: make list-builds EXPANSION=1 [PRODUCT=wowf]
+list-builds:
+ifndef EXPANSION
+	$(error EXPANSION is required. Usage: make list-builds EXPANSION=1 [PRODUCT=wowf])
+endif
+	@$(PYTHON) $(SCRIPTS)/latest.py --expansion $(EXPANSION) $(if $(PRODUCT),--product $(PRODUCT)) --list
 
 # Validate schema matches downloaded CSVs
 # Usage: make validate VERSION=2.5.5.65463
@@ -48,4 +57,4 @@ list-tables:
 	@echo "Optional tables:"
 	@for table in $(OPTIONAL_TABLES); do echo "  - $$table"; done
 
-.PHONY: fetch latest validate clean list-tables
+.PHONY: fetch latest list-builds validate clean list-tables
