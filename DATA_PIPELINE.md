@@ -62,7 +62,7 @@ luac5.1 -p Data/WotLK/Tailoring/Recipes.lua
 **Stage 1 - wago (`fetch.py`):** browser-like headers + gzip. Network errors and HTTP 5xx are
 retried (3 attempts, 2 s / 4 s backoff); 4xx is not. HTTP 400 means the table does not exist in
 that build and is reported `NOT IN BUILD` - a run failure for a required table, a skip for an
-optional one. Empty bodies and HTML/JSON error bodies are rejected (`EMPTY`, `NOT CSV (...)`).
+optional one (any other failure of an optional table still fails the run). Empty bodies and HTML/JSON error bodies are rejected (`EMPTY`, `NOT CSV (...)`).
 `make` exits non-zero and names the tables under `Not in build:` / `Failed:`. Each CSV is
 written to `<Table>.csv.tmp` and renamed, so a failed or interrupted download never truncates
 or replaces an existing CSV. **Recovery: re-run `make fetch VERSION=<build>`** - tables are

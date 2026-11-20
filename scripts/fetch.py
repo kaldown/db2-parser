@@ -143,8 +143,10 @@ def fetch_tables(
 ) -> int:
     """Download required and optional tables for one build into output_root/<version>/.
 
-    Returns the process exit code: 1 if any required table is not OK, else 0.
-    Optional tables that are absent or fail are reported and skipped.
+    Returns the process exit code: 1 if any required table is not OK or any
+    optional table FAILED, else 0. An optional table is skipped only when the
+    build does not have it (MISSING); any other failure would leave the run
+    green with the table silently absent or stale.
     """
     version_dir = output_root / version
     version_dir.mkdir(parents=True, exist_ok=True)
@@ -156,7 +158,7 @@ def fetch_tables(
     for table in list(tables) + [t for t in optional if t not in tables]:
         results[table] = download_table(table, version, version_dir, fetcher=fetcher)
         is_optional = table in optional_set and table not in tables
-        print(" (optional, skipped)" if is_optional and results[table] != OK else "")
+        print(" (optional, skipped)" if is_optional and results[table] == MISSING else "")
 
     def label(table: str) -> str:
         return f"{table} (optional)" if table in optional_set and table not in tables else table
@@ -172,7 +174,8 @@ def fetch_tables(
         print(f"Failed: {', '.join(failed)}")
 
     required_bad = [t for t in tables if results[t] != OK]
-    return 1 if required_bad else 0
+    optional_failed = [t for t, status in results.items() if t not in tables and status == FAILED]
+    return 1 if required_bad or optional_failed else 0
 
 
 def main() -> int:

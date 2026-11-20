@@ -22,7 +22,10 @@ for some products (on 2026-11-20: `wow_classic_era 1.15.9.70576`, `wow_anniversa
 `wow_classic_titan 3.80.2.70522`). To move a pin:
 
 1. `make list-builds EXPANSION=<n> PRODUCT=<product>` to see what is available.
-2. `make fetch VERSION=<new>` and `make validate VERSION=<new>`.
+2. `make fetch VERSION=<new>` and `make validate VERSION=<new>`. Validate is advisory for now:
+   the `schema/*.md` column lists follow `1.15.8.67156`, so other builds report the column
+   differences listed under each schema's "Build differences" (and, for WoW Forever, more
+   tables than those list). Read the mismatches; do not expect a clean pass.
 3. Update the row above (version, date, absent tables) in the same commit as the data that
    was regenerated from it.
 

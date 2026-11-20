@@ -60,7 +60,7 @@ make -C vendor/db2-parser fetch VERSION=1.60.1.71037   # wowf: WoW Forever
 Requests send browser-like headers and accept gzip. Network errors and HTTP 5xx are retried
 (3 attempts, 2 s then 4 s apart); HTTP 4xx is not. A table that does not exist in a build
 (HTTP 400) is reported as `NOT IN BUILD`: that fails the fetch for a required table and is
-skipped for an optional one. Each CSV is written to a temporary file and renamed, so a failed
+skipped for an optional one (any other failure of an optional table still fails the run). Each CSV is written to a temporary file and renamed, so a failed
 download never truncates or replaces an existing CSV.
 
 ### Validate Schema
@@ -68,6 +68,10 @@ download never truncates or replaces an existing CSV.
 ```bash
 make -C vendor/db2-parser validate VERSION=2.5.5.65463
 ```
+
+Advisory: the schema column lists follow build `1.15.8.67156` (the only pinned build that
+passes cleanly); other builds report known column differences (see each schema's
+"Build differences").
 
 ### Clean Artifacts
 

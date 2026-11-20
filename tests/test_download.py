@@ -85,6 +85,13 @@ class FetchTablesTests(unittest.TestCase):
         self.assertIn("NOT IN BUILD", out)
         self.assertIn("optional", out)
 
+    def test_fetch_tables_optional_failure_fails_run(self):
+        # Only "not in build" (HTTP 400) may skip an optional table; any other failure
+        # would leave the run green with the table silently absent or stale.
+        code, out = self.run_fetch({"A": CSV, "X": http_error(503)}, ["A"], ["X"])
+        self.assertEqual(code, 1)
+        self.assertIn("Failed: X (optional)", out)
+
 
 if __name__ == "__main__":
     unittest.main()
