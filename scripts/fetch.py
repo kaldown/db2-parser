@@ -6,13 +6,66 @@ Usage:
 """
 
 import argparse
+import gzip
+import http.client
 import sys
+import time
 import urllib.request
 import urllib.error
 from pathlib import Path
 
 
 WAGO_BASE_URL = "https://wago.tools/db2"
+
+# A full browser-like header set. wago.tools accepts a bare User-Agent today, but
+# CDN-fronted WoW sites have started rejecting bare clients with HTTP 403, so we
+# send what a browser sends rather than wait for that to happen here.
+BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/csv,application/json;q=0.9,text/html;q=0.8,*/*;q=0.5",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Accept-Encoding": "gzip",
+}
+
+# Errors worth another attempt: the network, not the request, was the problem.
+# HTTPError is a URLError subclass and is handled separately (4xx never retried).
+_TRANSIENT_ERRORS = (urllib.error.URLError, TimeoutError, ConnectionError, http.client.HTTPException)
+
+
+def http_get(
+    url: str,
+    timeout: float = 60,
+    *,
+    opener=urllib.request.urlopen,
+    sleep=time.sleep,
+    attempts: int = 3,
+) -> bytes:
+    """GET a URL with browser headers, gzip decoding and retry.
+
+    Retries network errors and HTTP 5xx with 2 s, 4 s, ... backoff. An HTTP 4xx
+    is the server's answer about this request, so it is raised at once.
+    Redirects are followed by urllib. Returns the decoded body.
+    """
+    for attempt in range(attempts):
+        last_attempt = attempt == attempts - 1
+        request = urllib.request.Request(url, headers=BROWSER_HEADERS)
+        try:
+            with opener(request, timeout=timeout) as response:
+                body = response.read()
+                if (response.headers.get("Content-Encoding") or "").lower() == "gzip":
+                    body = gzip.decompress(body)
+                return body
+        except urllib.error.HTTPError as e:
+            if e.code < 500 or last_attempt:
+                raise
+        except _TRANSIENT_ERRORS:
+            if last_attempt:
+                raise
+        sleep(2 * 2 ** attempt)
+    raise AssertionError("unreachable")  # loop always returns or raises
 
 
 def get_csv_url(table_name: str, version: str) -> str:
