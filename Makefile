@@ -11,7 +11,8 @@ TABLES := Spell SpellName Item ItemSparse SkillLine SkillLineAbility SpellReagen
 
 # Fetched best-effort: present only in some builds (see BUILDS.md).
 # ItemXItemEffect links recipe items to their effects where ItemEffect has no ParentItemID (Forever).
-OPTIONAL_TABLES := ItemXItemEffect
+# TradeSkillCategory names the categories SkillLineAbility.TradeSkillCategoryID points at (Forever).
+OPTIONAL_TABLES := ItemXItemEffect TradeSkillCategory
 
 # Fetch specific version
 # Usage: make fetch VERSION=2.5.5.65463

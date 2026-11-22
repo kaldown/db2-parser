@@ -5,11 +5,11 @@ what lets a fresh clone rebuild the same cache (see "Rebuild the cache" in `READ
 
 | Product | Version | Used for | Fetched | Tables absent |
 |---------|---------|----------|---------|---------------|
-| `wow_classic_era` | `1.15.8.67156` | Vanilla, Season of Discovery | 2026-11-20 | `ItemXItemEffect` |
-| `wow_anniversary` | `2.5.5.65895` | TBC | 2026-11-20 | `ItemXItemEffect` |
-| `wow_classic` | `3.4.5.63697` | WotLK | 2026-11-20 | `ItemXItemEffect` |
-| `wow_classic_titan` | `3.80.1.68318` | Titan (no dataset of its own yet; uses WotLK) | 2026-11-20 | `ItemXItemEffect` |
-| `wowf` | `1.60.1.71037` | WoW Forever (planned) | 2026-11-20 | none |
+| `wow_classic_era` | `1.15.8.67156` | Vanilla, Season of Discovery | 2026-11-20 | `ItemXItemEffect`, `TradeSkillCategory` |
+| `wow_anniversary` | `2.5.5.65895` | TBC | 2026-11-20 | `ItemXItemEffect`, `TradeSkillCategory` |
+| `wow_classic` | `3.4.5.63697` | WotLK | 2026-11-20 | `ItemXItemEffect`, `TradeSkillCategory` |
+| `wow_classic_titan` | `3.80.1.68318` | Titan (no dataset of its own yet; uses WotLK) | 2026-11-20 | `ItemXItemEffect`, `TradeSkillCategory` |
+| `wowf` | `1.60.1.71037` | WoW Forever | 2026-11-20 | none |
 
 "Tables absent" lists tables of the default set (`make list-tables`) that wago.tools reports as
 not existing in that build (HTTP 400). Only optional tables may be absent; a missing required

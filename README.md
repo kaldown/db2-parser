@@ -119,6 +119,7 @@ Optional tables (`OPTIONAL_TABLES`, fetched where the build has them):
 | Table | Description |
 |-------|-------------|
 | ItemXItemEffect | Item to effect link, for builds whose ItemEffect has no ParentItemID (WoW Forever) |
+| TradeSkillCategory | Names of the recipe categories `SkillLineAbility.TradeSkillCategoryID` points at (WoW Forever) |
 
 ## Schema Documentation
 

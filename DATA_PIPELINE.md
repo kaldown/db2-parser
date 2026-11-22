@@ -39,7 +39,9 @@ an explicit `VERSION` for reproducibility.
 
 WoW Forever differs in table shape: its `ItemEffect` has no `ParentItemID`, so the recipe item
 is found through `ItemXItemEffect` (an optional table, fetched only where it exists). Tool
-requirements come from `SpellTotems` + `TotemCategory`, present in every pinned build. See
+requirements come from `SpellTotems` + `TotemCategory`, present in every pinned build.
+`TradeSkillCategory` (optional, WoW Forever only) names the recipe categories, which the
+recipe pipeline uses to recognise recipes left over from another client. See
 `schema/*.md` "Build differences".
 
 ## Happy path (one continuous-tier bucket, e.g. WotLK)
